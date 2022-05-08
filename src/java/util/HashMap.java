@@ -625,41 +625,64 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;
-        if ((tab = table) == null || (n = tab.length) == 0)// 1、数组null或者0做初始化操作
-            n = (tab = resize()).length;// table为null或者长度为0都调用resize()方法进行初始化（方法可以初始化同时可以扩容，）
-        if ((p = tab[i = (n - 1) & hash]) == null)// 2、数组索引不存在值，直接放入
-            tab[i] = newNode(hash, key, value, null);// 判断如果数组索引中还不存在节点时，直接将节点放入数组中，不需要考虑冲突（风险：并发时可能导致值被覆盖）
+        // 1、数组null或者0做初始化操作。
+        // table为null或者长度为0都调用resize()方法进行初始化（方法可以初始化同时可以扩容，）
+        if ((tab = table) == null || (n = tab.length) == 0)
+            n = (tab = resize()).length;
+
+        // 2、数组索引不存在值，直接放入
+        // 判断如果数组索引中还不存在节点时，直接将节点放入数组中，不需要考虑冲突（风险：并发时可能导致值被覆盖）
+        if ((p = tab[i = (n - 1) & hash]) == null)
+            tab[i] = newNode(hash, key, value, null);
         else {
             Node<K,V> e; K k;
-            if (p.hash == hash &&                 // 3、判断是否覆盖值操作
+            // 3、判断是否覆盖值操作
+            // 当数组头节点哈希值、key值（||右边表示包含对象）和要插入的值相等时，此时直接用e指向数组节点，后面直接覆盖值，返回旧值
+            if (p.hash == hash &&
                     ((k = p.key) == key || (key != null && key.equals(k))))
-                e = p;// 当数组头节点哈希值、key值（||右边表示包含对象）和要插入的值相等时，此时直接用e指向数组节点，后面直接覆盖值，返回旧值
-            else if (p instanceof TreeNode)// 4、判断节点是否是红黑树节点
-                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);// 红黑树节点操作，增加节点（复杂）
-            else {//5、普通的节点冲突解决
-                for (int binCount = 0; ; ++binCount) {// 遍历链表长度，找到链表最后一个节点，然后将新的节点插入。当然还要看是否符合转换成红黑树的条件，条件是两个。1、链表节点数达到8 2、数组长度大于64。不同时满足两个条件，还是会走扩容
-                    if ((e = p.next) == null) {// 当找到p.next = null时，表示最后一个节点，直接在后面将新的值插入
-                        p.next = newNode(hash, key, value, null);// 采用尾插法（jdk1.8之前是头插法，因为作者认为最新的数据最有可能是热点数据，但是会造成循环链表死锁发生）进行解决冲突
-                        if (binCount >= TREEIFY_THRESHOLD - 1) // 满足条件binCount >= 7，转成红黑树。注：还要加上上一句代码的节点，其实此时已经是8个节点了。
+                e = p;
+
+                // 4、判断节点是否是红黑树节点
+                // 红黑树节点操作，增加节点（复杂）
+            else if (p instanceof TreeNode)
+                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+            else {
+                //5、普通的节点冲突解决
+                // 采用尾插法（jdk1.8之前是头插法，因为作者认为最新的数据最有可能是热点数据，但是会造成循环链表死锁发生）进行解决冲突
+                // 遍历链表长度，找到链表最后一个节点，然后将新的节点插入。当然还要看是否符合转换成红黑树的条件，条件是两个。
+                // 1、链表节点数达到8 2、数组长度大于64。不同时满足两个条件，还是会走扩容。
+                for (int binCount = 0; ; ++binCount) {
+                    if ((e = p.next) == null) {
+                        // 当找到p.next = null时，表示最后一个节点，直接在后面将新的值插入
+                        p.next = newNode(hash, key, value, null);
+                        // 满足条件binCount >= 7，转成红黑树。注：还要加上上一句代码的节点，其实此时已经是8个节点了。
+                        if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
                             treeifyBin(tab, hash);
                         break;
                     }
-                    if (e.hash == hash &&// 判断是否覆盖值操作，和上面步骤3的操作是一样的，但是步骤3只判断了头节点而已，这里则是头节点之后的节点
+                    // 判断是否覆盖值操作，和上面步骤3的操作是一样的，但是步骤3只判断了头节点而已，这里则是头节点之后的节点
+                    if (e.hash == hash &&
                             ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
                     p = e;
                 }
             }
-            if (e != null) {// 6、出现e节点不为空时，代表key已经存在，做替换新值返回旧值的操作
+
+            // 6、出现e节点不为空时，代表key已经存在，做替换新值返回旧值的操作
+            if (e != null) {
                 V oldValue = e.value;
-                if (!onlyIfAbsent || oldValue == null)// 前面方法onlyIfAbsent传入了false，所以直接走替换值操作
+                // 前面方法onlyIfAbsent传入了false，所以直接走替换值操作
+                if (!onlyIfAbsent || oldValue == null)
                     e.value = value;
-                afterNodeAccess(e);// 允许LinkedHashMap后动作的回调，HashMap调用无效果
+                // 允许LinkedHashMap后动作的回调，HashMap调用无效果
+                afterNodeAccess(e);
                 return oldValue;
             }
         }
         ++modCount;
-        if (++size > threshold)// 7、当数组长度大于阈值时，默认是12。例如，当无参构造HashMap时，第一次扩容是节点数达到13。
+
+        // 7、当数组长度大于阈值时，默认是12。例如，当无参构造HashMap时，第一次扩容是节点数达到13。
+        if (++size > threshold)
             resize();
         afterNodeInsertion(evict);
         return null;
