@@ -679,30 +679,48 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         int oldCap = (oldTab == null) ? 0 : oldTab.length;
         int oldThr = threshold;
         int newCap, newThr = 0;
+        // 数组大于0，不是初始化时进行的操作
         if (oldCap > 0) {
+            // 当旧数组超过最大容量，阈值直接直接取当前Integer最大值，并结束程序，不在扩容
             if (oldCap >= MAXIMUM_CAPACITY) {
                 threshold = Integer.MAX_VALUE;
                 return oldTab;
             }
             else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY &&
                      oldCap >= DEFAULT_INITIAL_CAPACITY)
-                newThr = oldThr << 1; // double threshold
+                // 扩容阈值扩大为原来的阈值2倍
+                newThr = oldThr << 1;
         }
-        else if (oldThr > 0) // initial capacity was placed in threshold
+
+        // 初始化数组容量为计算好的阈值。初始化，构造函数带容量时，数组容量是初始化阈值，初始化时阈值已经计算成满足2的n次方。
+        else if (oldThr > 0)
             newCap = oldThr;
-        else {               // zero initial threshold signifies using defaults
+
+        // 初始化，特指无参构造函数时，进行下列初始化
+        else {
+            // 初始化默认容器大小为16
             newCap = DEFAULT_INITIAL_CAPACITY;
+            // 初始化默认扩容阈值为12
             newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
         }
+
+        // 计算扩容阈值。初始化时，特指有参构造函数时，此时newThr必定为0。需要根据有参构造出的容量值newCap来为扩容阈值做计算
         if (newThr == 0) {
+            // xx * 0.75
             float ft = (float)newCap * loadFactor;
             newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ?
                       (int)ft : Integer.MAX_VALUE);
         }
+        // 更新阈值
         threshold = newThr;
+
+        // 根据新的容量创建新的节点数组容器（原来旧数组容器容量的2倍）
         @SuppressWarnings({"rawtypes","unchecked"})
         Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
+        // 更新容器
         table = newTab;
+
+        // 元素转移操作。容器是新的，如果旧容器还存在，则需要进行元素转移（过程较为复杂）。
         if (oldTab != null) {
             for (int j = 0; j < oldCap; ++j) {
                 Node<K,V> e;
