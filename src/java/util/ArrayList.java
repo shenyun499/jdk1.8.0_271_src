@@ -105,64 +105,58 @@ import sun.misc.SharedSecrets;
  */
 
 public class ArrayList<E> extends AbstractList<E>
-        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
-{
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
     private static final long serialVersionUID = 8683452581122892189L;
 
     /**
-     * Default initial capacity.
+     * ArrayList容器默认容量
      */
     private static final int DEFAULT_CAPACITY = 10;
 
     /**
-     * Shared empty array instance used for empty instances.
+     * 有惨构造函数，参数为0时，默认创建ArrayList时 elementData指定空数组值 和下面值相等
      */
     private static final Object[] EMPTY_ELEMENTDATA = {};
 
     /**
-     * Shared empty array instance used for default sized empty instances. We
-     * distinguish this from EMPTY_ELEMENTDATA to know how much to inflate when
-     * first element is added.
+     * 无惨构造函数，默认创建ArrayList时 elementData指定空数组值 和上面值相等
      */
     private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
 
     /**
-     * The array buffer into which the elements of the ArrayList are stored.
-     * The capacity of the ArrayList is the length of this array buffer. Any
-     * empty ArrayList with elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA
-     * will be expanded to DEFAULT_CAPACITY when the first element is added.
+     * 数组，存放元素（重）
      */
-    transient Object[] elementData; // non-private to simplify nested class access
+    transient Object[] elementData;
 
     /**
-     * The size of the ArrayList (the number of elements it contains).
-     *
-     * @serial
+     * 容器元素大小
      */
     private int size;
 
+    //TODO: ArrayList一共有三个构造函数
     /**
-     * Constructs an empty list with the specified initial capacity.
-     *
-     * @param  initialCapacity  the initial capacity of the list
-     * @throws IllegalArgumentException if the specified initial capacity
-     *         is negative
+     * 1、initialCapacity>0，创建大小为initialCapacity的Object数组
+     * 2、initialCapacity=0，创建一个空数组
+     * 3、initialCapacity<0，抛异常
+     * @param  initialCapacity  列表的初始容量
+     * @throws IllegalArgumentException 当列表参数小于0时抛出
      */
     public ArrayList(int initialCapacity) {
         if (initialCapacity > 0) {
             this.elementData = new Object[initialCapacity];
         } else if (initialCapacity == 0) {
+            // add时进行初始化
             this.elementData = EMPTY_ELEMENTDATA;
         } else {
-            throw new IllegalArgumentException("Illegal Capacity: "+
-                                               initialCapacity);
+            throw new IllegalArgumentException("Illegal Capacity: " + initialCapacity);
         }
     }
 
     /**
-     * Constructs an empty list with an initial capacity of ten.
+     * 初始化为空数组，等要用时再new，类似懒加载模式
      */
     public ArrayList() {
+        // add时进行初始化
         this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
     }
 

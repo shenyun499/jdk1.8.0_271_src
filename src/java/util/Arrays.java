@@ -3207,9 +3207,14 @@ public class Arrays {
      */
     public static <T,U> T[] copyOf(U[] original, int newLength, Class<? extends T[]> newType) {
         @SuppressWarnings("unchecked")
+        // 1、针对ArrayList调用copyOf都是使用(T[]) new Object[newLength]，因为ArrayList内部使用的是Object[]保存元素
+        // 2、original 中不是用Object来保存引用的来调用copyOf， 都是用反射扩容(T[]) Array.newInstance(newType.getComponentType(), newLength)
         T[] copy = ((Object)newType == (Object)Object[].class)
             ? (T[]) new Object[newLength]
             : (T[]) Array.newInstance(newType.getComponentType(), newLength);
+        // 调用native方法扩容，参数分别是原始数组、原始数组开始被复制值索引0、新扩容数组copy、新数组开始填充值值初始索引0、复制值的长度
+        // 从original数组0的位置复制Math.min(original.length, newLength)长度的元素到数组copy上，copy从0开始填充
+        // 此扩容是浅克隆
         System.arraycopy(original, 0, copy, 0,
                          Math.min(original.length, newLength));
         return copy;
