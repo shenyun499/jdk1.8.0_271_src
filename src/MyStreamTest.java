@@ -12,7 +12,7 @@ public class MyStreamTest {
 
     public static void main(String[] args) {
         MyStream of = MyStream.of("1", "2", "3");
-        Predicate p = t -> t.equals(1);
+        Predicate p = t -> t.equals("1");
         MyStream filter = of.filter(p);
         MyStream map = filter.map(String::toLowerCase);
         long count = map.count();

@@ -46,6 +46,11 @@ public abstract class MyPipeline implements MyStream {
     public Integer getLevel() {
         return level;
     }
+
+    public String[] getStr() {
+        return str;
+    }
+
     abstract MySink onWrap(MySink mySink);
 
     abstract static class StateLess extends MyPipeline {
@@ -87,7 +92,7 @@ public abstract class MyPipeline implements MyStream {
         return new StateLess(this) {
             @Override
             MySink onWrap(MySink mySink) {
-                return new MySink.StringSink() {
+                return new MySink.StringSink(mySink) {
                     @Override
                     public void accept(String str) {
                         nextSink.accept(function.apply(str));
@@ -101,7 +106,7 @@ public abstract class MyPipeline implements MyStream {
         return new StateLess(this) {
             @Override
             MySink onWrap(MySink mySink) {
-                return new MySink.StringSink() {
+                return new MySink.StringSink(mySink) {
                     @Override
                     public void accept(String str) {
                         nextSink.accept(mapper.applyAsLong(str));
@@ -122,6 +127,7 @@ public abstract class MyPipeline implements MyStream {
 
     @Override
     public long count() {
+        // 将元素转成1，sum是最后一个Sink，用来计数
         return mapToLong(e -> 1L).sum();
     }
 
@@ -130,18 +136,50 @@ public abstract class MyPipeline implements MyStream {
     }
 
     public long evaluate(MyPipeline myPipeline) {
-        return 0;
+        // 拿到最后一个Sink，后面可以开始做包装所有的Sink
+        MySink lastSink = myPipeline.onWrap(null);
+        // 还是调用最后一个Sink，得到最大值
+        return ((MySink.ReducingSink)wrapAndCopyInto(lastSink)).getState();
     }
 
-    long wrapAndCopyInto(MySink mySink) {
-        return copyInto(wrapSink(Objects.requireNonNull(mySink)));
+    MySink wrapAndCopyInto(MySink mySink) {
+        copyInto(wrapSink(Objects.requireNonNull(mySink)));
+        return mySink;
     }
 
-    private long copyInto(MySink wrapSink) {
-        return 0;
+    private void copyInto(MySink wrapSink) {
+        // 管道开始，会调用所有无状态的begin
+        wrapSink.begin();
+        // 遍历一遍元素，调用accept开始消费
+        String[] str = this.getSource();
+        for (String s : str) {
+            wrapSink.accept(s);
+        }
+        // 结束操作
+        wrapSink.end();
     }
 
-    private MySink wrapSink(MySink requireNonNull) {
-        return null;
+    /**
+     * 包装所有的sink，形成单链表具体每个 Sink的实现会有nextSink
+     * @param mySink 最后一个sink，终结
+     * @return
+     */
+    private MySink wrapSink(MySink mySink) {
+
+        Objects.requireNonNull(mySink);
+        for (MyPipeline p = this; p.getLevel() > 0; p = p.previousPipeline) {
+            // 高度为0说明p是head的head，不需要包装，可以跳出
+            // 高度不为0，实现Sink的管道 也就是调用管道的onWrap方法
+            mySink = p.onWrap(mySink);
+        }
+        // 返回head 的下一个Sink
+        return mySink;
+    }
+
+    private String[] getSource() {
+        MyPipeline p = this;
+        for (; p.getLevel() > 0; p = p.previousPipeline) {
+        }
+        return p.getStr();
     }
 }

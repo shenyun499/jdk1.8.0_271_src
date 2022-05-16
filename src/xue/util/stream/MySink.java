@@ -54,5 +54,9 @@ public interface MySink extends Consumer<String> {
         public void accept(long count) {
             state += count;
         }
+
+        public long getState() {
+            return state;
+        }
     }
 }
